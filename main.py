@@ -28,22 +28,7 @@ def extract_video_id(url: str) -> str:
 
 QUALITIES = ["default", "mqdefault", "hqdefault", "sddefault", "maxresdefault"]
 
-@app.get("/api/thumbnail")
-async def get_thumbnail(url: str = Query(...), quality: str = "maxresdefault"):
-    try:
-        video_id = extract_video_id(url)
-        if quality not in QUALITIES:
-            return JSONResponse({"error": f"Invalid quality. Use: {QUALITIES}"}, status_code=400)
-        
-        thumbnail_url = f"https://img.youtube.com/vi/{video_id}/{quality}.jpg"
-        return {
-            "success": True,
-            "video_id": video_id,
-            "quality": quality,
-            "thumbnail_url": thumbnail_url
-        }
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=400)
+# ... inside your main.py, replace the existing get_transcript function ...
 
 @app.get("/api/transcript")
 async def get_transcript(url: str = Query(...), language: str = "en"):
@@ -51,28 +36,22 @@ async def get_transcript(url: str = Query(...), language: str = "en"):
         video_id = extract_video_id(url)
         transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
         
-        # Try to get transcript
-        transcript = None
-        try:
-            transcript = transcript_list.find_transcript([language])
-        except:
-            try:
-                transcript = transcript_list.find_generated_transcript([language])
-            except:
-                transcript = next(iter(transcript_list))
-        
-        segments = transcript.fetch()
-        full_text = " ".join([entry['text'] for entry in segments])
-        
+        # ... (your existing transcript fetching logic) ...
+
         return {
             "success": True,
-            "video_id": video_id,
-            "language": transcript.language,
-            "transcript": full_text,
-            "segments": segments[:20]  # First 20 segments only
+            # ... (your existing success response) ...
         }
     except Exception as e:
-        return JSONResponse({"error": f"No transcript available: {str(e)}"}, status_code=404)
+        # THIS IS THE IMPORTANT PART - Return a clean, simple error
+        return JSONResponse(
+            status_code=404,
+            content={
+                "success": False,
+                "error": "TRANSCRIPT_NOT_AVAILABLE",
+                "message": "This video doesn't have subtitles or captions. Please try another video."
+            }
+        )
 
 @app.get("/")
 async def root():
